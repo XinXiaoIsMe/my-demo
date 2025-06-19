@@ -1,0 +1,28 @@
+# Source files
+src/
+test/
+tests/
+
+# Config files
+*.config.*
+tsconfig.json
+.eslintrc*
+.prettierrc*
+vitest.config.*
+tsup.config.*
+
+# Development files
+.github/
+.vscode/
+.idea/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Other
+coverage/
+.nyc_output/
+node_modules/
+*.log 
