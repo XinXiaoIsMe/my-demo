@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script type="module">
+    import CustomPromise from '../dist/index.js';
+
+    const p = new CustomPromise((resolve, reject) => {
+      resolve(1)
+    })
+    p.then(data => {
+      console.log(data)
+    })
+    setTimeout(() => {
+      p.then(data => {
+        console.log('inner', data)
+      })
+    })
+  </script>
+</body>
+
+</html>

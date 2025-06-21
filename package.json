@@ -1,11 +1,19 @@
 {
   "name": "my-demo",
-  "version": "0.1.0",
-  "description": "A TypeScript library template",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.5.0",
+  "description": "A TypeScript library template",
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "typescript",
+    "library"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -13,6 +21,9 @@
       "require": "./dist/index.cjs"
     }
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -38,16 +49,5 @@
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"
-  },
-  "keywords": [
-    "typescript",
-    "library"
-  ],
-  "author": "",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
-  "packageManager": "pnpm@9.5.0"
+  }
 }
