@@ -2,7 +2,7 @@
 /* eslint-disable test/prefer-lowercase-title */
 /* eslint-disable no-new */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import CustomPromise, { CustomPromiseError, isFunction, isPromise } from '../src'
+import CustomPromise, { CustomPromiseError, isFunction, isPromise } from './core'
 
 describe('CustomPromise', () => {
   beforeEach(() => {
@@ -256,12 +256,8 @@ describe('CustomPromise', () => {
     const fn = vi.fn()
     try {
       await p.catch((e) => {
-        console.log(e)
         fn(e)
       })
-    }
-    catch (err) {
-      console.log('err', err)
     }
     finally {
       expect(fn).toHaveBeenCalledWith(reason)

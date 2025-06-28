@@ -3,8 +3,8 @@
   "type": "module",
   "version": "0.1.0",
   "packageManager": "pnpm@9.5.0",
-  "description": "A TypeScript library template",
-  "author": "",
+  "description": "XinXiaoIsMe's demos",
+  "author": "XinXiaoIsMe",
   "license": "MIT",
   "repository": {
     "type": "git",
