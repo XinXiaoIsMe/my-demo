@@ -2,7 +2,7 @@
 /* eslint-disable test/prefer-lowercase-title */
 /* eslint-disable no-new */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import CustomPromise, { CustomPromiseError } from '../src'
+import CustomPromise, { CustomPromiseError, isFunction, isPromise } from '../src'
 
 describe('CustomPromise', () => {
   beforeEach(() => {
@@ -15,17 +15,19 @@ describe('CustomPromise', () => {
 
   it('promise实例必须是一个包含then方法的对象', () => {
     const promise = new CustomPromise(() => { })
-    expect(isPromiseLike(promise)).toBe(true)
+    expect(isPromise(promise)).toBe(true)
   })
 
   it('CustomPromise类必须接收一个executor函数', () => {
+    let error
     try {
       // @ts-ignore
       new CustomPromise()
     }
     catch (err) {
-      expect(err).toEqual(new TypeError(CustomPromiseError.typeError))
+      error = err
     }
+    expect(error).toEqual(new TypeError(CustomPromiseError.typeError))
   })
 
   it('executor必须同步执行', () => {
@@ -41,6 +43,21 @@ describe('CustomPromise', () => {
       expect(isFunction(resolve)).toBe(true)
       expect(isFunction(reject)).toBe(true)
     })
+  })
+
+  it('executor函数执行报错时，promise变为rejected状态', async () => {
+    const p = new CustomPromise(() => {
+      throw new Error('failed')
+    })
+    let error
+    try {
+      await p
+    }
+    catch (e) {
+      error = e
+    }
+    expect(p.isRejected()).toBe(true)
+    expect(error).toEqual(new Error('failed'))
   })
 
   it('promise处于fulfilled状态时，then函数的onfulfilled回调必须接受resolve传入的值', async () => {
@@ -186,7 +203,7 @@ describe('CustomPromise', () => {
       resolve(true)
     })
     const result = p.then()
-    expect(isPromiseLike(result)).toBe(true)
+    expect(isPromise(result)).toBe(true)
     expect(result.isPending()).toBe(true)
   })
 
@@ -200,30 +217,57 @@ describe('CustomPromise', () => {
     })
   })
 
-  it('test', async () => {
-    vi.useRealTimers()
-    const fn = vi.fn()
+  it('resolve一个promise时，需要取出这个promise的值', () => {
     const p = new CustomPromise((resolve) => {
       resolve(1)
     })
-    p.then()
-    setTimeout(() => {
-      p.then((data) => {
-        fn(data)
-      }).then(() => {
-        expect(fn).toHaveBeenCalledWith(1)
-      })
+
+    const p2 = new CustomPromise((resolve) => {
+      resolve(p)
+    })
+
+    p2.then((data) => {
+      expect(data).toBe(1)
     })
   })
+
+  it('reject一个promise时，直接将这个promise传递给onRejected', async () => {
+    const p = new CustomPromise((resolve, reject) => {
+      reject('error')
+    })
+
+    const p2 = new CustomPromise((resolve) => {
+      resolve(p)
+    })
+
+    try {
+      await p2
+    }
+    catch (e) {
+      expect(e).toBe('error')
+    }
+  })
+
+  it('promise状态为rejected时，数据需要传递到catch', async () => {
+    const reason = 'error'
+    const p = new CustomPromise((resolve, reject) => {
+      reject(reason)
+    })
+    const fn = vi.fn()
+    try {
+      await p.catch((e) => {
+        console.log(e)
+        fn(e)
+      })
+    }
+    catch (err) {
+      console.log('err', err)
+    }
+    finally {
+      expect(fn).toHaveBeenCalledWith(reason)
+    }
+  })
 })
-
-function isFunction(target: any) {
-  return typeof target === 'function'
-}
-
-function isPromiseLike(target: any) {
-  return typeof target === 'object' && target !== null && isFunction(target.then)
-}
 
 function nextTick() {
   return Promise.resolve()

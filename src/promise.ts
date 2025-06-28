@@ -44,7 +44,7 @@ export class MyPromise<T> {
       this.state = PromiseState.FULFILLED
       this.value = value
 
-      // 异步执行所有fulfilled回调
+      // 将fulfilled回调放入微任务队列中，异步执行所有fulfilled回调
       queueMicrotask(() => {
         this.onFulfilledCallbacks.forEach(callback => callback(value))
         this.onFulfilledCallbacks = []
@@ -57,7 +57,6 @@ export class MyPromise<T> {
       this.state = PromiseState.REJECTED
       this.reason = reason
 
-      // 异步执行所有rejected回调
       queueMicrotask(() => {
         this.onRejectedCallbacks.forEach(callback => callback(reason))
         this.onRejectedCallbacks = []

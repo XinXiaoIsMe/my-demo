@@ -11,17 +11,18 @@
   <script type="module">
     import CustomPromise from '../dist/index.js';
 
-    const p = new CustomPromise((resolve, reject) => {
-      resolve(1)
-    })
-    p.then(data => {
-      console.log(data)
-    })
-    setTimeout(() => {
-      p.then(data => {
-        console.log('inner', data)
+    async function run() {
+      const p = new CustomPromise((resolve, reject) => {
+        resolve(1)
       })
-    })
+      console.log('here')
+      p.then().then(data => {
+        console.log(data)
+      })
+    }
+
+    run()
+
   </script>
 </body>
 
