@@ -149,13 +149,19 @@ class CustomPromise<T = unknown> {
     return this.then(null, onrejected)
   }
 
-  static resolve(value: any) {
+  static resolve(): CustomPromise<void>
+  static resolve<T>(value?: T | PromiseLike<T>): CustomPromise<T>
+  static resolve(value?: any): CustomPromise<any> {
+    // 如果value是CustomPromise的实例，则直接返回
+    if (value instanceof CustomPromise)
+      return value
+
     return new CustomPromise((resolve) => {
       resolve(value)
     })
   }
 
-  static reject(reason: any) {
+  static reject<T = never>(reason: any): CustomPromise<T> {
     return new CustomPromise((_, reject) => {
       reject(reason)
     })
