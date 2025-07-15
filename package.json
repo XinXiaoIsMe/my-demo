@@ -37,7 +37,8 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
-    "release": "bumpp && npm publish"
+    "release": "bumpp && npm publish",
+    "test:promise": "vitest run src/Promise/promise-aplus.test.ts"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.6.4",

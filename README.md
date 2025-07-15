@@ -58,7 +58,7 @@ npm run build
 
 构建后会在 `dist/` 目录生成：
 - `index.js` - ESM 格式
-- `index.cjs` - CommonJS 格式  
+- `index.cjs` - CommonJS 格式
 - `index.d.ts` - TypeScript 类型声明文件
 
 ### 发布

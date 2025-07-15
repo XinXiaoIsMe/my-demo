@@ -13,8 +13,8 @@ export default defineConfig({
         'test/',
         '**/*.d.ts',
         '**/*.config.*',
-        '**/coverage/**'
-      ]
-    }
-  }
-}) 
+        '**/coverage/**',
+      ],
+    },
+  },
+})

@@ -1,13 +1,19 @@
 type Resolve<T = unknown> = (data: T) => void
 type Reject = (reason?: any) => void
-type PromiseExecutor<T = unknown> = (resolve: Resolve<T>, reject: Reject) => void
+type PromiseExecutor<T = unknown> = (
+  resolve: Resolve<T>,
+  reject: Reject
+) => void
 type PromiseFulfilledCallback<T = unknown> = (data: T) => void
 type PromiseRejectedCallback<T = any> = (reason: T) => void
 type Microtask = (data: any) => void
 type AnyFn = (...args: unknown[]) => unknown
 
 interface PromiseLike<T = unknown> {
-  then: (onfulfilled: PromiseFulfilledCallback<T>, onrejected: PromiseRejectedCallback) => any
+  then: (
+    onfulfilled: PromiseFulfilledCallback<T>,
+    onrejected: PromiseRejectedCallback
+  ) => any
 }
 
 enum CustomPromiseState {
@@ -22,6 +28,7 @@ const defaultRejected: PromiseRejectedCallback = (reason: any) => {
 
 export const CustomPromiseError = {
   typeError: 'Promise resolver undefined is not a function',
+  cycleError: 'Chaining cycle detected for promise #<CustomPromise>',
 }
 
 class CustomPromise<T = unknown> {
@@ -33,6 +40,7 @@ class CustomPromise<T = unknown> {
   constructor(executor: PromiseExecutor<T>) {
     if (typeof executor !== 'function') {
       warn(CustomPromiseError.typeError)
+      return
     }
 
     try {
@@ -75,29 +83,61 @@ class CustomPromise<T = unknown> {
     })
   }
 
-  then(onfulfilled?: PromiseFulfilledCallback<T> | null, onrejected?: PromiseRejectedCallback | null) {
-    const onfulfilledCb = isFunction<PromiseFulfilledCallback>(onfulfilled) ? onfulfilled : defaultFulfilled
-    const onrejectedCb = isFunction(onrejected) ? onrejected : defaultRejected
+  then(
+    onfulfilled?: PromiseFulfilledCallback<T> | null,
+    onrejected?: PromiseRejectedCallback | null,
+  ) {
+    const onfulfilledCb: PromiseFulfilledCallback<T>
+      = isFunction<PromiseFulfilledCallback>(onfulfilled)
+        ? onfulfilled
+        : defaultFulfilled
+    const onrejectedCb: PromiseRejectedCallback = isFunction(onrejected)
+      ? onrejected
+      : defaultRejected
     const p = new CustomPromise((resolve, reject) => {
       if (this.state === CustomPromiseState.FULFILLED) {
         addMicrotask(() => {
-          onfulfilledCb(this.value!)
+          try {
+            const x = onfulfilledCb(this.value!)
+            resolvePromise(x, p, resolve, reject)
+          }
+          catch (e) {
+            reject(e)
+          }
         })
       }
 
       if (this.state === CustomPromiseState.REJECTED) {
         addMicrotask(() => {
-          onrejectedCb(this.reason)
+          try {
+            const x = onrejectedCb(this.reason)
+            resolvePromise(x, p, resolve, reject)
+          }
+          catch (e) {
+            reject(e)
+          }
         })
       }
 
       if (this.state === CustomPromiseState.PENDING) {
         this.onfulfilledCbs.push((data) => {
-          resolve(onfulfilledCb(data))
+          try {
+            const x = resolve(onfulfilledCb(data))
+            resolvePromise(x, p, resolve, reject)
+          }
+          catch (e) {
+            reject(e)
+          }
         })
 
         this.onrejectedCbs.push((reason) => {
-          reject(onrejectedCb(reason))
+          try {
+            const x = reject(onrejectedCb(reason))
+            resolvePromise(x, p, resolve, reject)
+          }
+          catch (e) {
+            reject(e)
+          }
         })
       }
     })
@@ -107,6 +147,18 @@ class CustomPromise<T = unknown> {
 
   catch(onrejected: PromiseRejectedCallback) {
     return this.then(null, onrejected)
+  }
+
+  static resolve(value: any) {
+    return new CustomPromise((resolve) => {
+      resolve(value)
+    })
+  }
+
+  static reject(reason: any) {
+    return new CustomPromise((_, reject) => {
+      reject(reason)
+    })
   }
 
   isPending() {
@@ -119,6 +171,74 @@ class CustomPromise<T = unknown> {
 
   isRejected() {
     return this.state === CustomPromiseState.REJECTED
+  }
+}
+
+/**
+ * then函数的处理函数
+ * @param x then函数的回调函数的返回值
+ * @param p then函数返回的新的promise
+ * @param resolve 新的promise的resolve
+ * @param reject 新的promise的reject
+ */
+function resolvePromise(
+  x: any,
+  p: CustomPromise,
+  resolve: PromiseFulfilledCallback,
+  reject: PromiseRejectedCallback,
+) {
+  // 如果x和p相等，会造成死循环，直接抛出错误
+  if (x === p) {
+    const error = new TypeError(CustomPromiseError.cycleError)
+    reject(error)
+    return
+  }
+
+  // 设置锁，防止多次调用
+  // 在thenable对象中，如果then的实现中缓存了resolve或者reject，就可以操作对resolve/reject进行多次调用，因此需要使用called防止多次调用
+  let called = false
+  // 判断是否是thenable对象
+  if (isFunction(x) || isObject(x)) {
+    try {
+      // 防止获取x.then报错,或者执行then.call报错，这里需要使用try捕获
+      const then = (x as PromiseLike).then
+      // 如果是thenable对象，则需要先解析对象
+      if (isFunction(then)) {
+        then.call(
+          x,
+          (value: any) => {
+            if (called)
+              return
+
+            called = true
+            // 递归处理，直到value为非thenable对象后resolve
+            resolvePromise(value, p, resolve, reject)
+          },
+          (reason: any) => {
+            if (called)
+              return
+
+            called = true
+            // reject则直接返回
+            reject(reason)
+          },
+        )
+      }
+      else {
+        resolve(x)
+      }
+    }
+    catch (e) {
+      // 如果在报错前promise的状态已经修改，则不需要执行reject，保证promise的状态只改变一次
+      if (called)
+        return
+
+      called = true
+      reject(e)
+    }
+  }
+  else {
+    resolve(x)
   }
 }
 
@@ -153,6 +273,10 @@ function addMicrotask(cb: () => void) {
   setTimeout(cb)
 }
 
+function isObject<T extends object>(target: any): target is T {
+  return typeof target === 'object' && target !== null
+}
+
 export function isFunction<T extends AnyFn>(target: any): target is T {
   return typeof target === 'function'
 }
@@ -163,7 +287,11 @@ export function isFunction<T extends AnyFn>(target: any): target is T {
  * @returns 判断结果
  */
 export function isPromise(target: any): target is PromiseLike<any> {
-  return (typeof target === 'object' || isFunction(target)) && target !== null && isFunction(target.then)
+  return (
+    (typeof target === 'object' || isFunction(target))
+    && target !== null
+    && isFunction(target.then)
+  )
 }
 
 export default CustomPromise
