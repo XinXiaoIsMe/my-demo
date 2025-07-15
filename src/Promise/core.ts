@@ -150,14 +150,14 @@ class CustomPromise<T = unknown> {
   }
 
   static resolve(): CustomPromise<void>
-  static resolve<T>(value?: T | PromiseLike<T>): CustomPromise<T>
-  static resolve(value?: any): CustomPromise<any> {
+  static resolve<T>(value: T | PromiseLike<T>): CustomPromise<T>
+  static resolve<T>(value?: T | PromiseLike<T>): CustomPromise<T> {
     // 如果value是CustomPromise的实例，则直接返回
     if (value instanceof CustomPromise)
       return value
 
     return new CustomPromise((resolve) => {
-      resolve(value)
+      resolve(value as T)
     })
   }
 
